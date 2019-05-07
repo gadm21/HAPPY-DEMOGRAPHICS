@@ -36,6 +36,15 @@ class face_demographics():
 
         }
 
+    def get_camera_by_venue(self, venueId):
+        result = []
+        self.db_cursor.execute(
+            "select * from face_detection_camera where venue_id = {} ;".format(venueId)
+        )
+        result = self.db_cursor.fetchall()
+
+        return result
+
     def db_connection(self):
         # # Connect to production database
         mydb = mysql.connector.connect(
@@ -100,8 +109,10 @@ class face_demographics():
 
 
 def get_summary_demographics(self, s_date, e_date, venue_id):
+
+    cameras = self.get_camera_by_venue(venue_id)
     self.db_cursor.execute(
-        "select * from face_demographics where timestamp BETWEEN {} AND {} ;".format(s_date, e_date)
+        "select * from face_demographics where ventimestamp BETWEEN {} AND {} ;".format(s_date, e_date)
     )
     items_found = self.db_cursor.fetchall()
     # 0 - Smile

@@ -191,7 +191,8 @@ def create_query_string(c_timestamp, y_timestamp, chids, rec_num):
 
 
 def get_registered_camera(mydb, db_cursor):
-    cameras = []
+    cameras = cameras_devices = []
+
     db_cursor.execute(
         "select * from face_detection_camera;"
     )
@@ -199,8 +200,9 @@ def get_registered_camera(mydb, db_cursor):
     if len(items_found) > 0:
         for item in items_found:
             cameras.append("{}$1$0$0".format(items_found['device_id']))
+            cameras_devices.append({"{}$1$0$0".format(items_found['device_id']): item['id']})
 
-        return cameras
+        return cameras, cameras_devices
 
 
 def report_day(c_timestamp, y_timestamp, rec_num):
@@ -210,13 +212,12 @@ def report_day(c_timestamp, y_timestamp, rec_num):
     mydb, db_cursor = db_connection()
 
     url = "{}/face/detection/record/feature".format(domainip)
-    channelIds = get_registered_camera(mydb, db_cursor)
+    channelIds, cameras_devices = get_registered_camera(mydb, db_cursor)
     payload = create_query_string(str(c_timestamp), str(y_timestamp), channelIds, rec_num)
     # querystring = {"nowTime": int(c_timestamp), "time": int(y_timestamp), "pageSize": "100000", "page": "1", "startTime": "",
     #                "endTime": "", "type": "0", "channelIds": ""}
 
-    logger.debug(url)
-    logger.debug(json.dumps(payload))
+
     headers = {
         'Content-Type': "application/json",
         'Connection': "keep-alive",
@@ -255,7 +256,7 @@ def report_day(c_timestamp, y_timestamp, rec_num):
                 # this_camera_id = data[0]
 
                 # this_camera_id = item['channelId']
-                this_camera_id = 1
+                this_camera_id = cameras_devices[item['channelId']]
 
                 # insert into db
                 db_cursor.execute(

@@ -19,7 +19,7 @@ def demographics(venueId):
     s_timestamp = utils.date_to_timestamp(start_date)
     e_timestamp = utils.date_to_timestamp(end_date)
     fd = face_demographics()
-    result = fd.get_summary_demographics(s_timestamp, e_timestamp)
+    result = fd.get_summary_demographics(s_timestamp, e_timestamp, venueId)
 
     return json.dumps(
         {
