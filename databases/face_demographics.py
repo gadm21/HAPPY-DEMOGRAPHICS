@@ -69,19 +69,19 @@ class face_demographics():
 
     def get_age_range(self, age):
         if 0 <= age <= 7:
-            return 1
+            return "0-7"
         elif 8 <= age <= 17:
-            return 2
+            return "8-17"
         elif 18 <= age <= 25:
-            return 3
+            return "18-25"
         elif 26 <= age <= 35:
-            return 4
+            return "26-35"
         elif 36 <= age <= 45:
-            return 5
+            return "36-45"
         elif 46 <= age <= 55:
-            return 6
+            return "46-55"
         elif 56 <= age:
-            return 7
+            return "56+"
 
     def commulitive_data(self, item):
 
@@ -111,31 +111,33 @@ class face_demographics():
         self.emotion['screams'] = self.emotion['screams'] + 1 if item['emotion'] == "10" else self.emotion['screams']
 
 
-def get_summary_demographics(self, s_date, e_date, venue_id):
+    def get_summary_demographics(self, s_date, e_date, venue_id):
 
-    cameras = self.get_camera_by_venue(venue_id)
-    self.db_cursor.execute(
-        "select * from face_demographics "
-        "where  camera_id in {} and timestamp BETWEEN {} AND {} ;".format(cameras, s_date, e_date)
-    )
-    items_found = self.db_cursor.fetchall()
-    # 0 - Smile
-    # 1 - Anger
-    # 2 - Sadness
-    # 3 - Fear
-    # 4 - Surprised
-    # 5 - Normal
-    if len(items_found) > 0:
-        for item in items_found:
-            self.commulitive_data(item)
+        cameras = self.get_camera_by_venue(venue_id)
+        myList = ','.join(map(str, cameras))
+        print(myList)
+        self.db_cursor.execute(
+            "select * from face_demographics "
+            "where  camera_id in({}) and timestamp BETWEEN {} AND {} ;".format(myList, s_date, e_date)
+        )
+        items_found = self.db_cursor.fetchall()
+        # 0 - Smile
+        # 1 - Anger
+        # 2 - Sadness
+        # 3 - Fear
+        # 4 - Surprised
+        # 5 - Normal
+        if len(items_found) > 0:
+            for item in items_found:
+                self.commulitive_data(item)
 
-    self.data = {
-        "age_distro": self.age_distro,
-        "gender_distro": self.gender_distro,
-        "emotion": self.emotion
-    }
+        self.data = {
+            "age_distro": self.age_distro,
+            "gender_distro": self.gender_distro,
+            "emotion": self.emotion
+        }
 
-    return self.data
+        return self.data
 
 
 

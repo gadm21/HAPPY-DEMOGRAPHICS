@@ -24,7 +24,7 @@ CREATE TABLE `face_demographics` (
     `gender` varchar(50),
     `age` varchar(50),
 	`emotion` varchar(50),
-    `age_range` ENUM('0-14','15-17','18-21', '22-29', '30-49', '50+') DEFAULT '22-29',
+    `age_range`  varchar(50),
     `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`, `api_id`)
      ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
@@ -38,7 +38,7 @@ CREATE TABLE `face_demographics_record`(
     `camera_id` int(11),
     `gender` varchar(50),
     `age` varchar(50),
-    `age_range` ENUM('0-14','15-17','18-21', '22-29', '30-49', '50+') DEFAULT '22-29',
+    `age_range`  varchar(50),
     `beginAge` varchar(100),
     `endAge` varchar(100),
     `emotion` varchar(200),

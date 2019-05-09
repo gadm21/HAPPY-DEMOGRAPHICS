@@ -55,7 +55,7 @@ def db_connection():
     #     passwd="tapway",
     #     database="dahuadb_face",
     # )
-    db_cursor = mydb.cursor(buffered=True)
+    db_cursor = mydb.cursor(buffered=True, dictionary=True)
     return mydb, db_cursor
 
 
@@ -191,16 +191,16 @@ def create_query_string(c_timestamp, y_timestamp, chids, rec_num):
 
 
 def get_registered_camera(mydb, db_cursor):
-    cameras = cameras_devices = []
-
+    cameras = []
+    cameras_devices = {}
     db_cursor.execute(
         "select * from face_detection_camera;"
     )
     items_found = db_cursor.fetchall()
     if len(items_found) > 0:
         for item in items_found:
-            cameras.append("{}$1$0$0".format(items_found['device_id']))
-            cameras_devices.append({"{}$1$0$0".format(items_found['device_id']): item['id']})
+            cameras.append("{}$1$0$0".format(item['device_id']))
+            cameras_devices["{}$1$0$0".format(item['device_id'])] = item['id']
 
         return cameras, cameras_devices
 
@@ -217,6 +217,7 @@ def report_day(c_timestamp, y_timestamp, rec_num):
     # querystring = {"nowTime": int(c_timestamp), "time": int(y_timestamp), "pageSize": "100000", "page": "1", "startTime": "",
     #                "endTime": "", "type": "0", "channelIds": ""}
 
+    print(payload)
 
     headers = {
         'Content-Type': "application/json",
@@ -227,18 +228,17 @@ def report_day(c_timestamp, y_timestamp, rec_num):
     response = requests.post(url, data=json.dumps(payload), headers=headers)
     dailyresultdict = []
 
+    print(response)
     if 'data' in response.json():
 
         data = response.json().get('data').get('pageData')
+
+
         for item in data:
             db_cursor.execute(
                 "select api_id from face_demographics where api_id = {} ;".format(item['id'])
             )
             item_found = db_cursor.fetchall()
-            try:
-                yield item_found
-            finally:
-                pass
 
             if len(item_found) == 0:
                 this_id = item['id']
@@ -256,6 +256,8 @@ def report_day(c_timestamp, y_timestamp, rec_num):
                 # this_camera_id = data[0]
 
                 # this_camera_id = item['channelId']
+
+                print(cameras_devices)
                 this_camera_id = cameras_devices[item['channelId']]
 
                 # insert into db
@@ -288,9 +290,9 @@ def reportlive():
     # get last hour data
     currentTime = datetime.now()
     c_timestamp = int(time.mktime(currentTime.timetuple()))
-    yesterdayTime = datetime.now() - timedelta(days=8)
+    yesterdayTime = datetime.now() - timedelta(days=20)
     y_timestamp = int(time.mktime(yesterdayTime.timetuple()))
-    records_num = 100000  # grep 100 rec from each camera every 10sec
+    records_num = 200000  # grep 100 rec from each camera every 10sec
     report_day(c_timestamp, y_timestamp, records_num)
 
 

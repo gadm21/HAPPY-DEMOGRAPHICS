@@ -25,10 +25,9 @@ CELERYBEAT_SCHEDULE = {
     },
 
     # 'add-every-10-seconds': {
-         # 'task': 'reportlive',
-         # 'schedule': timedelta(seconds=20),
+    #      'task': 'reportlive',
+    #      'schedule': timedelta(seconds=20),
     # },
-
 
 }
 
