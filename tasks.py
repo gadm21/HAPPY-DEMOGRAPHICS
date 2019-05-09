@@ -28,14 +28,13 @@ import os
 from dateutil.parser import parse
 from pytz import timezone
 
-
 redis_db = redis.StrictRedis(host="localhost", port=6379, db=0)
 
 from celery import Celery
 
 app = Celery("tasks",
-                broker=os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379'),
-                backend=os.environ.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379'))
+             broker=os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379'),
+             backend=os.environ.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379'))
 app.conf.CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
 app.config_from_object('celeryconfig')
 
@@ -56,12 +55,12 @@ def db_connection():
     #     passwd="tapway",
     #     database="dahuadb_face",
     # )
-    db_cursor = mydb.cursor(buffered=True)
+    db_cursor = mydb.cursor(buffered=True, dictionary=True)
     return mydb, db_cursor
 
 
-domainip = 'http://tapwayoffice.duckdns.org:8080/admin/API'
-#domainip = 'http://192.168.0.2/admin/API'
+domainip = 'http://tapwayoffice.duckdns.org:8083/admin/API'
+# domainip = 'http://192.168.0.2/admin/API'
 username = "system"
 password = "GoTapway123#"
 
@@ -88,7 +87,7 @@ def pass_ecrypt(randomkey):
 
 def login():
     # First login
-    #url = "{}/accounts/authorize".format(domainip)
+    # url = "{}/accounts/authorize".format(domainip)
     url = '%s/accounts/authorize' % domainip
 
     signature = ""
@@ -149,18 +148,20 @@ def date_to_Asia(date):
 
 
 def get_age_range(age):
-    if 0 <= age <= 14:
+    if 0 <= age <= 7:
         return 1
-    elif 15 <= age <= 17:
+    elif 8 <= age <= 17:
         return 2
-    elif 18 <= age <= 21:
+    elif 18 <= age <= 25:
         return 3
-    elif 22 <= age <= 29:
+    elif 26 <= age <= 35:
         return 4
-    elif 30 <= age <= 49:
+    elif 36 <= age <= 45:
         return 5
-    elif 50 <= age:
+    elif 46 <= age <= 55:
         return 6
+    elif 56 <= age:
+        return 7
 
 
 def create_query_string(c_timestamp, y_timestamp, chids, rec_num):
@@ -188,18 +189,36 @@ def create_query_string(c_timestamp, y_timestamp, chids, rec_num):
         }
     }
 
+
+def get_registered_camera(mydb, db_cursor):
+    cameras = []
+    cameras_devices = {}
+    db_cursor.execute(
+        "select * from face_detection_camera;"
+    )
+    items_found = db_cursor.fetchall()
+    if len(items_found) > 0:
+        for item in items_found:
+            cameras.append("{}$1$0$0".format(item['device_id']))
+            cameras_devices["{}$1$0$0".format(item['device_id'])] = item['id']
+
+        return cameras, cameras_devices
+
+
 def report_day(c_timestamp, y_timestamp, rec_num):
     # url = "http://192.168.0.2/admin/API/face/report/day/list"
-    #url = http://192.168.0.2/admin/API/face/detection/record/feature
+    # url = http://192.168.0.2/admin/API/face/detection/record/feature
+
+    mydb, db_cursor = db_connection()
 
     url = "{}/face/detection/record/feature".format(domainip)
-
-    payload = create_query_string(str(c_timestamp), str(y_timestamp), ["1000002$1$0$0"], rec_num)
+    channelIds, cameras_devices = get_registered_camera(mydb, db_cursor)
+    payload = create_query_string(str(c_timestamp), str(y_timestamp), channelIds, rec_num)
     # querystring = {"nowTime": int(c_timestamp), "time": int(y_timestamp), "pageSize": "100000", "page": "1", "startTime": "",
     #                "endTime": "", "type": "0", "channelIds": ""}
 
-    logger.debug(url)
-    logger.debug(json.dumps(payload))
+    print(payload)
+
     headers = {
         'Content-Type': "application/json",
         'Connection': "keep-alive",
@@ -209,20 +228,17 @@ def report_day(c_timestamp, y_timestamp, rec_num):
     response = requests.post(url, data=json.dumps(payload), headers=headers)
     dailyresultdict = []
 
-    mydb, db_cursor = db_connection()
-
+    print(response)
     if 'data' in response.json():
 
         data = response.json().get('data').get('pageData')
+
+
         for item in data:
             db_cursor.execute(
                 "select api_id from face_demographics where api_id = {} ;".format(item['id'])
             )
             item_found = db_cursor.fetchall()
-            try:
-                yield item_found
-            finally:
-                pass
 
             if len(item_found) == 0:
                 this_id = item['id']
@@ -239,59 +255,55 @@ def report_day(c_timestamp, y_timestamp, rec_num):
                 # data = db_cursor.fetchone()
                 # this_camera_id = data[0]
 
-                #this_camera_id = item['channelId']
-                this_camera_id = 1
+                # this_camera_id = item['channelId']
 
+                print(cameras_devices)
+                this_camera_id = cameras_devices[item['channelId']]
 
                 # insert into db
                 db_cursor.execute(
                     "INSERT INTO face_demographics(api_id, timestamp, camera_id, gender, age, age_range, emotion)"
                     " VALUES ({}, {}, {}, {}, {}, {}, {});".format(this_id, this_timestamp, this_camera_id, this_gender,
                                                                    this_age, this_age_range, this_emotion)
-                                  )
+                )
 
                 mydb.commit()
-
-
-
 
 
 @app.task(name='reportdaily')
 def reportdaily():
     login()
 
-    #get last hour data
+    # get last hour data
     currentTime = datetime.now()
     c_timestamp = int(time.mktime(currentTime.timetuple()))
     yesterdayTime = datetime.now() - timedelta(hours=1)
     y_timestamp = int(time.mktime(yesterdayTime.timetuple()))
-    records_num = 100000 # grep 100 rec from each camera every 10sec
+    records_num = 100000  # grep 100 rec from each camera every 10sec
     report_day(c_timestamp, y_timestamp, records_num)
-
 
 
 @app.task(name='reportlive')
 def reportlive():
     login()
 
-    #get last hour data
+    # get last hour data
     currentTime = datetime.now()
     c_timestamp = int(time.mktime(currentTime.timetuple()))
-    yesterdayTime = datetime.now() - timedelta(days=3)
+    yesterdayTime = datetime.now() - timedelta(days=20)
     y_timestamp = int(time.mktime(yesterdayTime.timetuple()))
-    records_num = 100000 # grep 100 rec from each camera every 10sec
+    records_num = 200000  # grep 100 rec from each camera every 10sec
     report_day(c_timestamp, y_timestamp, records_num)
-
-
 
 
 @app.task(name='midnightcleansing')
 def midnightcleansing():
-   query = "DELETE n1 FROM face_demographics n1, face_demographics n2 WHERE n1.id > n2.id AND " \
-           "n1.api_id = n2.api_id and n1.timestamp = n2.timestamp; "
-   mydb, db_cursor = db_connection()
-   db_cursor.execute(query)
-   mydb.commit()
+    query = "DELETE n1 FROM face_demographics n1, face_demographics n2 WHERE n1.id > n2.id AND " \
+            "n1.api_id = n2.api_id and n1.timestamp = n2.timestamp; "
+    mydb, db_cursor = db_connection()
+    db_cursor.execute(query)
+    mydb.commit()
+
 
 if __name__ == '__main__':
     # setup_periodic_tasks()
