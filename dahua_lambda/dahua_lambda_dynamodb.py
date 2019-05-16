@@ -228,12 +228,14 @@ def report_day(c_timestamp, y_timestamp, rec_num):
             response = table_fd.scan(
                 FilterExpression='api_id =:val1',
                 ExpressionAttributeValues={
-					':val1': item['id']
-				}
-			)
+                    ':val1': item['id']
+                }
+            )
+        
             response_count = table_fd.scan(
                 FilterExpression=Attr('id').gt(0)
-			)
+            )
+                
             count = response_count['Count'] + 1
 		
             if response['Count'] == 0:
