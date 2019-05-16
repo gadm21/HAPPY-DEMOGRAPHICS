@@ -251,24 +251,24 @@ def report_day(c_timestamp, y_timestamp, rec_num):
                 # insert into db
 
                 table_fd.put_item(
-					Item={
-					    'id': count,
-						'api_id': this_id,
-						'timestamp': this_timestamp,
-						'camera_id': this_camera_id,
-						'gender': this_gender,
-						'age': this_age,
-						'age_range': this_age_range,
-						'emotion': this_emotion,
-						'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-					}
-					ConditionExpression="attribute_not_exists(api_id)"
-				)
+                    Item={
+                        'id': count,
+                        'api_id': this_id,
+                        'timestamp': this_timestamp,
+                        'camera_id': this_camera_id,
+                        'gender': this_gender,
+                        'age': this_age,
+                        'age_range': this_age_range,
+                        'emotion': this_emotion,
+                        'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                    ConditionExpression="attribute_not_exists(api_id)"
+                )
                 count = count + 1
 
 
 def logic_func(event, context)
-	reportdaily()
+    reportdaily()
 
 def lambda_handler(event, context):
     logic_func(event, context)
