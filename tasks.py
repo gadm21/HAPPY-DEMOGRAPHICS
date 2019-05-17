@@ -292,6 +292,7 @@ def reportlive():
     c_timestamp = int(time.mktime(currentTime.timetuple()))
     yesterdayTime = datetime.now() - timedelta(days=20)
     y_timestamp = int(time.mktime(yesterdayTime.timetuple()))
+    y_tiimestamp =  1557364930 #change to start date to grap data
     records_num = 200000  # grep 100 rec from each camera every 10sec
     report_day(c_timestamp, y_timestamp, records_num)
 
