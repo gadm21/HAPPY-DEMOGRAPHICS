@@ -17,7 +17,7 @@ CREATE TABLE `face_detection_camera`(
 
 CREATE TABLE `face_demographics` (
     `id` int(11) NOT NULL AUTO_INCREMENT,
-     `api_id` int(11) NOT NULL,
+    `api_id` int(11) NOT NULL,
     `timestamp` varchar(100),
     `camera_id` int(11),
 
